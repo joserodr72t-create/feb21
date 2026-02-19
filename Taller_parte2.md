@@ -1,6 +1,6 @@
 # Pipeline CI/CD — Security Hardening
 
-## Parte 2B: Seguridad en el Pipeline de Despliegue en GKE
+## Parte 2: Seguridad en el Pipeline de Despliegue en GKE
 
 ---
 
