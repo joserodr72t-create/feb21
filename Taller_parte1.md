@@ -114,7 +114,8 @@ gcloud artifacts repositories create agent-repo \
   --description="Repositorio de imágenes del Crypto Chatbot"
 ```
 
-La ruta del registro será:
+La ruta del registro será:  
+
 
 ```
 us-central1-docker.pkg.dev/PROJECT_ID/agent-repo
