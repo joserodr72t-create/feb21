@@ -6,7 +6,7 @@
 
 ## 1. Objetivos de esta Práctica
 
-Partiendo del pipeline funcional de la Parte 1 (GitHub Actions → Artifact Registry → GKE), añadimos tres capas de seguridad de forma incremental. Cada paso se puede aplicar, probar y verificar de forma independiente antes de pasar al siguiente.
+Partiendo del pipeline funcional de la Práctica 1 (GitHub Actions → Artifact Registry → GKE), añadimos tres capas de seguridad de forma incremental. Cada paso se puede aplicar, probar y verificar de forma independiente antes de pasar al siguiente.
 
 | Paso | Mejora | Problema que resuelve | Resultado |
 |---|---|---|---|
@@ -23,7 +23,7 @@ GitHub Actions Runner
   ├─ OIDC Token (GitHub) ←→ Workload Identity Federation (GCP)
   │   └─ Sin clave JSON — token efímero de corta duración
   ├─ Build imágenes
-  ├─ 🔍 Trivy Scan (CRITICAL/HIGH → bloquea pipeline)
+  ├─ Trivy Scan (CRITICAL/HIGH → bloquea pipeline)
   ├─ Push imágenes → Artifact Registry
   ├─ Crear K8s Secret (GOOGLE_API_KEY) 
   └─ Ansible → kubectl apply → GKE
@@ -46,7 +46,7 @@ export PROJECT_ID=$(gcloud config get-value project)
 export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
 export REGION=us-central1
 export CLUSTER_NAME=test-cluster-a
-export GITHUB_ORG="tu-usuario-u-org"    # tu usuario o nombre de organización en GitHub
+export GITHUB_ORG="tu-usuario"    # tu usuario o nombre de organización en GitHub
 export GITHUB_REPO="tu-repo"             # nombre del repositorio
 ```
 
@@ -66,7 +66,7 @@ Se añaden dos pasos de escaneo (uno por imagen), justo después de cada build y
 
 ```yaml
       # ─────────────────────────────────────
-      # 🔍 Escaneo de seguridad — Backend
+      #  Escaneo de seguridad — Backend
       # ─────────────────────────────────────
       - name: Trivy scan backend image
         uses: aquasecurity/trivy-action@0.33.1
@@ -78,7 +78,7 @@ Se añaden dos pasos de escaneo (uno por imagen), justo después de cada build y
           ignore-unfixed: true
 
       # ─────────────────────────────────────
-      # 🔍 Escaneo de seguridad — Frontend
+      #  Escaneo de seguridad — Frontend
       # ─────────────────────────────────────
       - name: Trivy scan frontend image
         uses: aquasecurity/trivy-action@0.33.1
@@ -102,7 +102,7 @@ Se añaden dos pasos de escaneo (uno por imagen), justo después de cada build y
 > 💡 **`ignore-unfixed: true`** es importante: sin esto, Trivy puede bloquear el pipeline por vulnerabilidades en paquetes base del SO que aún no tienen parche, lo cual no es accionable por el desarrollador.
 
 
-### 1.2 — Verificar Trivy  (Opcional si vas bien de tiempo)
+### 1.2 — Verificar Trivy (opcional, solo si vas bien de tiempo)
 
 Forzar un fallo para comprobar que el pipeline se detiene:
 
@@ -169,7 +169,7 @@ attribute.ref=assertion.ref" \
 | `--attribute-mapping` | Traduce claims del JWT de GitHub a atributos de GCP |
 | `--attribute-condition` | **Restricción de seguridad**: solo acepta tokens de tu organización/usuario |
 
-> 🔒 **Seguridad:** El `attribute-condition` es crítico. Sin él, *cualquier* repositorio de GitHub podría autenticarse con tu pool. Con la condición `repository_owner=='tu-org'`, solo los workflows de tus repos pueden obtener tokens.
+>  **Seguridad:** El `attribute-condition` es crítico. Sin él, *cualquier* repositorio de GitHub podría autenticarse con tu pool. Con la condición `repository_owner=='tu-org'`, solo los workflows de tus repos pueden obtener tokens.
 
 ### 2.4 — Vincular la Service Account al Pool
 
@@ -182,7 +182,7 @@ gcloud iam service-accounts add-iam-policy-binding \
   --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/${GITHUB_ORG}/${GITHUB_REPO}"
 ```
 
-> 📝 Esto restringe aún más: solo el repositorio específico puede impersonar la SA.
+>  Esto restringe aún más: solo el repositorio específico puede impersonar la SA.
 
 ### 2.5 — Obtener el Identificador del Provider
 
@@ -214,7 +214,7 @@ Guarda este valor — lo necesitarás como secreto de GitHub.
 | `WORKLOAD_IDENTITY_PROVIDER` | `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` |
 | `SERVICE_ACCOUNT_EMAIL` | `github-ci@PROJECT_ID.iam.gserviceaccount.com` |
 
-(Sustituye el placeholder por su valor en tu entorno !!)
+(aquí si que hay que remplazar los valores por los reales de tu entorno)
 
 **Mantener sin cambios:**
 - `PROJECT_ID`
@@ -259,7 +259,7 @@ Successfully authenticated via Workload Identity Federation
 
 No debe aparecer ninguna referencia a `credentials_json` ni a claves JSON.
 
-> ⏱️ **Nota:** Los cambios de IAM pueden tardar hasta 5 minutos en propagarse. Si el primer intento falla, esperar y reintentar.
+>  **Nota:** Los cambios de IAM pueden tardar hasta 5 minutos en propagarse. Si el primer intento falla, esperar y reintentar.
 
 ### 2.9 — Eliminar la Clave JSON Antigua
 
@@ -281,7 +281,7 @@ gcloud iam service-accounts keys delete KEY_ID \
 
 ### ¿Qué es y por qué?
 
-En la Práctica 1, la `GOOGLE_API_KEY` se escribe en `backend/.env` durante el build y queda embebida dentro de la imagen Docker. Esto significa que cualquiera con acceso a la imagen (Artifact Registry, caché del runner, etc.) puede extraer la clave.
+En la Práctica 2, la `GOOGLE_API_KEY` se escribe en `backend/.env` durante el build y queda embebida dentro de la imagen Docker. Esto significa que cualquiera con acceso a la imagen (Artifact Registry, caché del runner, etc.) puede extraer la clave.
 
 La solución es crear un Kubernetes Secret y montarlo como variable de entorno en el pod del backend. La clave nunca toca la imagen.
 
@@ -302,7 +302,7 @@ data:
   GOOGLE_API_KEY: PLACEHOLDER
 ```
 
->  `PLACEHOLDER` será sustituido por el valor real (codificado en base64) durante el despliegue con Ansible.
+> ⚠️ `PLACEHOLDER` será sustituido por el valor real (codificado en base64) durante el despliegue con Ansible.
 
 ### 3.2 — Modificar `k8s/backend.yaml`
 
@@ -359,12 +359,30 @@ spec:
   type: ClusterIP
 ```
 
-### 3.3 — Consideraciones sobre el Backend
+### 3.3 — Modificar `backend/Dockerfile`
 
-La aplicación Python del backend debe leer `GOOGLE_API_KEY` desde las variables de entorno del sistema, no desde un fichero `.env`. 
-El backend usa `python-dotenv`, y este paquete ya prioriza variables de entorno del sistema sobre el fichero `.env`. No hay que modificar el código Python.
+El Dockerfile actual contiene `COPY .env .` que copia el fichero `.env` dentro de la imagen. Hay que eliminarla:
 
-### 3.4 — Cambios en el Workflow
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+COPY crypto_tools.py .
+# COPY .env .          ← ELIMINAR esta línea (la API key ahora viene del K8s Secret)
+
+EXPOSE 80
+CMD ["python", "app.py"]
+```
+
+>  **Importante:** Si se mantiene `COPY .env .` y no existe el fichero, el build de Docker falla con `failed to calculate checksum: "/.env": not found`.
+
+### 3.4 — Consideraciones sobre el Backend
+
+La aplicación Python del backend debe leer `GOOGLE_API_KEY` desde las variables de entorno del sistema (con `os.environ` o `os.getenv`), no desde un fichero `.env`. Si el backend usa `python-dotenv` con `load_dotenv()`, este paquete no falla si el `.env` no existe y respeta las variables de entorno del sistema, por lo que debería funcionar sin cambios. Si se quiere ser explícito, se puede usar `load_dotenv(override=False)` para garantizar que las variables del sistema tienen prioridad.
+
+### 3.5 — Cambios en el Workflow
 
 **Eliminar** el paso `Create backend .env`:
 
@@ -388,7 +406,7 @@ El backend usa `python-dotenv`, y este paquete ya prioriza variables de entorno 
             --extra-vars "image_tag=${{ github.sha }}"
 ```
 
-### 3.5 — Verificar Kubernetes Secrets
+### 3.6 — Verificar Kubernetes Secrets
 
 ```bash
 # Verificar que el Secret existe
@@ -405,7 +423,7 @@ Environment:
   GOOGLE_API_KEY:  <set to the key 'GOOGLE_API_KEY' in secret 'backend-secrets'>
 ```
 
-### 3.6 — Verificar que la imagen NO contiene la API key
+### 3.7 — Verificar que la imagen NO contiene la API key
 
 ```bash
 # Descargar y examinar la imagen
@@ -646,7 +664,7 @@ jobs:
             frontend/
 
       # ─────────────────────────────────────
-      #  Escaneo de seguridad con Trivy
+      # 🔍 Escaneo de seguridad con Trivy
       # (Bloquea el pipeline si hay CRITICAL/HIGH)
       # ─────────────────────────────────────
       - name: Trivy scan backend image
@@ -699,7 +717,18 @@ jobs:
           ansible-playbook ansible/deploy-gke.yml \
             --extra-vars "image_tag=${{ github.sha }}"
 ```
-|
+
+### Resumen de Cambios respecto a la Práctica 1
+
+| Aspecto | Antes (Práctica 1) | Ahora (Securizado) |
+|---|---|---|
+| Escaneo de seguridad | No existía | Trivy escanea ambas imágenes antes del push |
+| Orden Build/Push | Build → Push inmediato | Build → Scan → Push (solo si pasa) |
+| Autenticación GCP | `credentials_json: GCP_SA_KEY` | `workload_identity_provider` + `service_account` via OIDC |
+| Permisos del workflow | No definidos | `id-token: write` (requerido para OIDC) |
+| Paso "Create backend .env" | Sí — escribe API key en `.env` | **Eliminado** — la key va como K8s Secret |
+| Secretos en GitHub | 3 + clave JSON | 4 sin clave JSON (WIF provider + SA email) |
+
 ---
 
 ## Paso 6 — Test Funcional Final
